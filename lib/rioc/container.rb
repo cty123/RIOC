@@ -4,7 +4,8 @@ require 'rioc/errors'
 require 'set'
 
 module Rioc
-  # RiocContainer class
+  # Rioc container class that is responsible for storing all the beans definitions as well as live instance
+  # of the beans declared.
   class RiocContainer
 
     # Initialize the IoC container
@@ -23,7 +24,8 @@ module Rioc
                                               Rioc::Bean::BeanFactory.new(name,
                                                                           ->(*ps) { klass.new(*ps) },
                                                                           params: params),
-                                              scope)
+                                              scope,
+                                              lazy)
     end
 
     # Register a instance without any need of resolving dependencies
@@ -31,11 +33,12 @@ module Rioc
       @beans[name] = Rioc::Bean::RiocBean.new(name,
                                               [],
                                               Rioc::Bean::BeanFactory.new(name, block),
-                                              scope)
+                                              scope,
+                                              lazy)
 
     end
 
-    # Resolve bean with the provided name
+    # Resolve bean with the provided bean name
     def resolve(name)
       # Should panic if the bean name is never registered
       raise UnknownDependencyNameError, name unless @beans[name]
@@ -46,7 +49,7 @@ module Rioc
       # directly return the bean instance
       @container[name] if @container[name] && bean.scope == Rioc::Bean::Scope::SINGLETON
 
-      # Need to create the bean
+      # Call the internal function to create the bean instance and return it
       resolve_bean(name)
     end
 
