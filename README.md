@@ -22,7 +22,57 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+The user experience will be closer to C# Autofac framework. Suppose you want to build a webapp using the repository pattern, here's a typical usecase,
+
+```ruby
+# Initialize a container
+container = Rioc::RiocContainer.new
+
+# Specify the controller to the IoC container, suppose your controller looks like the following
+# 
+# class BusinessController
+#   def initialize(repository)
+#     @repository = repository
+#   end
+#   
+#   def save(text)
+#     @repository.save(text)
+#   end
+# end
+# 
+# Typically for most web application frameworks, the controller is one instance per request, and it
+# would translate to Transient scope in RIOC
+container.register(:biz_controller, scope: Rioc::Bean::Scope::TRANSIENT) do |c| 
+    BusinessController.new(c.resolve(:repository))
+end
+
+# Now you need to have the repository dependency setup so that it can be consumed by the controller
+# and typically repository is Singleton as in Guice or Spring in Java. Suppose the repository looks
+# like this
+# 
+# class Repository
+#   def initialize(credential)
+#     @credential = credential
+#   end
+# end
+#
+# And RIOC uses Singleton scope by default.
+container.register(:repository) { |c| Repository.new(c.resolve(:credential)) }
+
+# Now register the credential, let's assume the credential is an parameterless object
+container.register(:credential) { |_| Credential.create("username", "password") }
+
+# Build container
+container.build_container
+
+# Now we have all dependencies we need registered into the container, we can use them by
+biz_con = container.resolve(:biz_controller)
+biz_con.save("Hello RIOC")
+
+# Of course you can also resolve repository and credential
+repo = container.resolve(:repository)
+cred = container.resolve(:credential)
+```
 
 ## Development
 
