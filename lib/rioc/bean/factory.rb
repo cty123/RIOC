@@ -4,22 +4,14 @@ module Rioc
 
       # Initialize the dependency factory class to build the dependency
       # whenever the dependency is needed.
-      def initialize(name, block, params: [])
+      def initialize(container, name, block)
+        @container = container
         @name = name
         @block = block
-        @params = params
       end
 
-      def build_instance(dependencies: {})
-        return @block.call if @params.empty?
-
-        deps = @params.map do |p|
-          next p unless p.instance_of?(Rioc::Resolve)
-
-          dependencies[p.name]
-        end
-
-        @block.call(*deps)
+      def build_instance
+        @block.call(@container)
       end
 
     end

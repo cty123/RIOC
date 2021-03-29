@@ -12,27 +12,13 @@ module Rioc
     def initialize
       @container = {}
       @beans = {}
-    end
-
-    # Register a class with resolving the dependencies
-    def register_with_resolve(name, klass, *params, scope: Rioc::Bean::Scope::SINGLETON, lazy: false)
-      dependencies = params
-                     .select { |p| p.instance_of?(Rioc::Resolve) }
-                     .map(&:name)
-      @beans[name] = Rioc::Bean::RiocBean.new(name,
-                                              dependencies,
-                                              Rioc::Bean::BeanFactory.new(name,
-                                                                          ->(*ps) { klass.new(*ps) },
-                                                                          params: params),
-                                              scope,
-                                              lazy)
+      @in_recursion = false
     end
 
     # Register a instance without any need of resolving dependencies
     def register(name, scope: Rioc::Bean::Scope::SINGLETON, lazy: false, &block)
       @beans[name] = Rioc::Bean::RiocBean.new(name,
-                                              [],
-                                              Rioc::Bean::BeanFactory.new(name, block),
+                                              Rioc::Bean::BeanFactory.new(self, name, block),
                                               scope,
                                               lazy)
 
@@ -47,7 +33,7 @@ module Rioc
 
       # If the bean already exists in the container and the scope is singleton,
       # directly return the bean instance
-      @container[name] if @container[name] && bean.scope == Rioc::Bean::Scope::SINGLETON
+      return @container[name] if @container[name] && bean.scope == Rioc::Bean::Scope::SINGLETON
 
       # Call the internal function to create the bean instance and return it
       resolve_bean(name)
@@ -55,7 +41,7 @@ module Rioc
 
     # Build container
     def build_container
-      @beans.each { |name, _| resolve_bean(name) }
+      @beans.each { |name, _| resolve(name) }
     end
 
     # Start application
@@ -64,46 +50,32 @@ module Rioc
     private
 
     def resolve_bean(bean)
+      # We need to know if we are recursively resolving the dependencies
+      # in order to detect cyclic dependencies
+      unless @in_recursion
+        @in_recursion = true
+
+        @visited = Set.new
+        @built = Set.new
+
+        instance = build_bean(bean)
+
+        @in_recursion = false
+        return instance
+      end
+
+      # Check if it has cyclic dependency
+      raise Rioc::Errors::CyclicDependencyError, bean if @visited.include?(bean) && !@built.include?(bean)
+
       # Resolve current dependencies before building the instance
-      resolve_dependencies(bean)
+      build_bean(bean)
     end
 
-    def resolve_dependencies(bean, visited: {}, built: {})
-      # Check if it has cyclic dependency
-      raise Rioc::Errors::CyclicDependencyError, bean if visited[bean] && !built[bean]
-
-      # If bean has an life instance and the scope is singleton
-      # we can simply return it
-      if @beans[bean].scope == Rioc::Bean::Scope::SINGLETON
-        return @container[bean] if @container[bean]
-        return built[bean] if built[bean]
-      end
-
-      visited[bean] = true
-
-      # Resolve all the dependencies of the bean before building it
-      params = @beans[bean].dependencies.map do |dep|
-
-        # If the bean is alive in new built instance list and scope is Singleton, fetch it from built list
-        next [dep, built[dep]] if built[dep] && @beans[dep].scope == Rioc::Bean::Scope::SINGLETON
-
-        # If the bean is alive in container and scope is Singleton, fetch it from container
-        if @container[dep] && @beans[dep].scope == Rioc::Bean::Scope::SINGLETON
-          built[dep] = @container[dep]
-          next [dep, @container[dep]]
-        end
-
-        # Recursively resolve the dependency
-        instance = resolve_dependencies(dep, visited: visited, built: built)
-        built[dep] = instance
-        [dep, built[dep]]
-      end
-
-      # Should have all the dependencies resolved, build the instance
-      instance = @beans[bean].factory.build_instance(dependencies: params.to_h)
-
+    def build_bean(bean)
+      @visited.add(bean)
+      instance = @beans[bean].factory.build_instance
       @container[bean] = instance if @beans[bean].scope == Rioc::Bean::Scope::SINGLETON
-      built[bean] = instance
+      @built.add(bean)
       instance
     end
 

@@ -12,11 +12,10 @@ module Rioc
     # RiocBean class
     class RiocBean
 
-      attr_reader :name, :dependencies, :factory, :scope, :lazy
+      attr_reader :name, :factory, :scope, :lazy
 
-      def initialize(name, dependencies, factory, scope, lazy)
+      def initialize(name, factory, scope, lazy)
         @name = name
-        @dependencies = dependencies
         @factory = factory
         @scope = scope
         @lazy = lazy

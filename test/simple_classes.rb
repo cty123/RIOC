@@ -6,16 +6,19 @@ end
 
 class BClass
   def initialize(c, d)
+    puts "init B"
   end
 end
 
 class CClass
   def initialize(e)
+    puts "init C"
   end
 end
 
 class DClass
   def initialize(c, e)
+    puts "init D"
   end
 end
 
