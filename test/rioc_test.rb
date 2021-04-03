@@ -6,7 +6,7 @@ class RiocTest < Minitest::Test
     refute_nil ::Rioc::VERSION
   end
 
-  def test_it_does_something_useful
+  def test_simple_dependency_resolving
 
     container = Rioc::RiocContainer.new
 
@@ -17,7 +17,8 @@ class RiocTest < Minitest::Test
     container.register(:E) { EClass.new }
 
     container.build_container
-    a = container.resolve(:A)
+    a_instance = container.resolve(:A)
+    a_instance.do_something
   end
 
   def test_new

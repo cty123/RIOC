@@ -1,6 +1,11 @@
 class AClass
   def initialize(b, text)
     puts "init A: #{b}, #{text}"
+    @b_instance = b
+  end
+
+  def do_something
+    puts "BClass instance #{@b_instance}"
   end
 end
 

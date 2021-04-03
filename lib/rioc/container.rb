@@ -13,6 +13,10 @@ module Rioc
       @container = {}
       @beans = {}
       @in_recursion = false
+
+      # Used to resolve dependencies
+      @visited = Set.new
+      @built = Set.new
     end
 
     # Register a instance without any need of resolving dependencies
@@ -25,6 +29,8 @@ module Rioc
     end
 
     # Resolve bean with the provided bean name
+    # @param name - The name of the bean to resolve
+    # @return A live instance of the bean definition
     def resolve(name)
       # Should panic if the bean name is never registered
       raise UnknownDependencyNameError, name unless @beans[name]
@@ -41,7 +47,9 @@ module Rioc
 
     # Build container
     def build_container
-      @beans.each { |name, _| resolve(name) }
+      @beans
+        .reject { |name| @beans[name].lazy }
+        .each { |name, _| resolve(name) }
     end
 
     # Start application
@@ -49,18 +57,19 @@ module Rioc
 
     private
 
+    # Internal method to resolve bean if the bean doesn't have an instance
+    # in container or the bean is transient.
     def resolve_bean(bean)
       # We need to know if we are recursively resolving the dependencies
       # in order to detect cyclic dependencies
       unless @in_recursion
         @in_recursion = true
-
-        @visited = Set.new
-        @built = Set.new
+        clear_dfs_history
 
         instance = build_bean(bean)
 
         @in_recursion = false
+        clear_dfs_history
         return instance
       end
 
@@ -71,6 +80,7 @@ module Rioc
       build_bean(bean)
     end
 
+    # Internal method to instantiate a new bean
     def build_bean(bean)
       @visited.add(bean)
       instance = @beans[bean].factory.build_instance
@@ -79,5 +89,10 @@ module Rioc
       instance
     end
 
+    # Internal method to clear the history of the DFS search to resolve a bean
+    def clear_dfs_history
+      @visited.clear
+      @built.clear
+    end
   end
 end

@@ -10,7 +10,9 @@ GEM
     rake (12.3.3)
 
 PLATFORMS
+  ruby
   x64-mingw32
+  x86_64-linux
 
 DEPENDENCIES
   minitest (~> 5.0)
