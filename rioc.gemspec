@@ -3,7 +3,7 @@ require_relative 'lib/rioc/version'
 Gem::Specification.new do |spec|
   spec.name = 'rioc'
   spec.version = Rioc::VERSION
-  spec.authors = ['aaa']
+  spec.authors = ['cty']
   spec.email = ['ctychen2216@gmail.com']
 
   spec.summary = 'Ruby IoC container framework'

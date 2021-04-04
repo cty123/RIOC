@@ -7,7 +7,6 @@ class RiocTest < Minitest::Test
   end
 
   def test_simple_dependency_resolving
-
     container = Rioc::RiocContainer.new
 
     container.register(:A) { |c| AClass.new(c.resolve(:B), "hello")}
